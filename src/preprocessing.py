@@ -263,7 +263,7 @@ def get_different_categories(list_recommendations, item_info):
     return finish_recommendations
 
 
-def get_final_recomendation_list(row, item_info, train_1, N=5):
+def get_final_recomendation_list(row, item_info, train_1, df_price, list_pop_rec, N=5):
     """Пост-фильтрация товаров
 
     Input
@@ -278,9 +278,9 @@ def get_final_recomendation_list(row, item_info, train_1, N=5):
     purchased_goods = train_1.loc[train_1['user_id'] == row['user_id']]['item_id'].unique()
     
 
-    df_price = train_1.groupby('item_id')['sales_value'].mean().reset_index()
-
-    list_pop_rec = popularity_recommendation(train_1, n=500)
+    # df_price = train_1.groupby('item_id')['sales_value'].mean().reset_index()
+    #
+    # list_pop_rec = popularity_recommendation(train_1, n=500)
 
     if recommend == 0:
         recommend = list_pop_rec
@@ -342,7 +342,14 @@ def get_final_recomendation(X_test, test_preds_proba, val_2, train_1, item_featu
     result = result_2.merge(recomendations, how='left')
     result['recomendations'] = result['recomendations'].fillna(0)
 
+    df_price = train_1.groupby('item_id')['sales_value'].mean().reset_index()
+
+    pop_rec = popularity_recommendation(train_1, n=500)
+    list_pop_rec = []
+    [list_pop_rec.append(item) for item in pop_rec if df_price \
+        .loc[df_price['item_id'] == item]['sales_value'].values > 1]
+
     result['recomendations'] = result.progress_apply \
-        (lambda x: get_final_recomendation_list(x, item_info=item_features, train_1=train_1, N=5), axis=1)
+        (lambda x: get_final_recomendation_list(x, item_info=item_features, train_1=train_1, df_price=df_price, list_pop_rec=list_pop_rec, N=5), axis=1)
 
     return result
