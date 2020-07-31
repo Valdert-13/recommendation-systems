@@ -280,7 +280,7 @@ def get_final_recomendation_list(row, item_info, train_1, N=5):
 
     df_price = train_1.groupby('item_id')['sales_value'].mean().reset_index()
 
-    list_pop_rec = popularity_recommendation(train_1, n=300)
+    list_pop_rec = popularity_recommendation(train_1, n=500)
 
     if recommend == 0:
         recommend = list_pop_rec
@@ -297,6 +297,10 @@ def get_final_recomendation_list(row, item_info, train_1, N=5):
     expensive_items = []
     [expensive_items.append(item) for item in price_recommendations if df_price. \
         loc[df_price['item_id'] == item]['sales_value'].values > 7]
+
+    if len(expensive_items) ==0:
+        [expensive_items.append(item) for item in list_pop_rec if df_price. \
+            loc[df_price['item_id'] == item]['sales_value'].values > 7]
 
     # 4 товара юзер никогда не покупал
     new_items = []
