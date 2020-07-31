@@ -29,11 +29,21 @@ def precision_at_k(recommended_list, bought_list, k=5):
     return precision
 
 
-def money_precision_at_k(recommended_list, bought_list, prices_recommended, k=5):
-    # your_code
-    # Лучше считать через скалярное произведение, а не цикл
+def money_precision_at_k(recommended_list, bought_list, df_price, k=5):
+    prices_recommended = []
 
-    return precision
+    bought_list = np.array(bought_list)
+    recommended_list = np.array(recommended_list[:k])
+
+    [prices_recommended.append(df_price.loc[df_price['item_id'] == item]['sales_value'].values) for item in
+     recommended_list]
+
+    prices_recommended = np.array(prices_recommended[:k])
+    flags = np.isin(recommended_list, bought_list)
+    prices = flags @ prices_recommended
+    precision = prices.sum() / prices_recommended.sum()
+
+    return float("{0:.4f}".format(precision))
 
 
 def recall(recommended_list, bought_list):
@@ -62,6 +72,14 @@ def recall_at_k(recommended_list, bought_list, k=5):
 
 
 def money_recall_at_k(recommended_list, bought_list, prices_recommended, prices_bought, k=5):
-    # your_code
+
+    bought_list = np.array(bought_list)
+    prices_bought = np.array(prices_bought)
+    recommended_list = np.array(recommended_list[:k])
+    prices_recommended = np.array(prices_recommended[:k])
+
+    check_bought = np.isin(recommended_list, bought_list) * prices_recommended
+
+    recall = check_bought.sum() / prices_bought.sum()
 
     return recall

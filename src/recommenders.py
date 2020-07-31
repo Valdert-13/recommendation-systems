@@ -42,6 +42,27 @@ class MainRecommender:
         self.model = self.fit(self.user_item_matrix)
         self.own_recommender = self.fit_own_recommender(self.user_item_matrix)
 
+        self.item_factors = self.model.item_factors
+        self.user_factors = self.model.user_factors
+
+        self.items_emb_df, self.users_emb_df = self.get_embeddings(self)
+
+    @staticmethod
+    def get_embeddings(self):
+        items_emb = self.item_factors
+        items_emb_df = pd.DataFrame(items_emb)
+        items_emb_df.reset_index(inplace=True)
+        items_emb_df['item_id'] = items_emb_df['index'].apply(lambda x: self.id_to_itemid[x])
+        items_emb_df = items_emb_df.drop('index', axis=1)
+
+        users_emb = self.user_factors
+        users_emb_df = pd.DataFrame(users_emb)
+        users_emb_df.reset_index(inplace=True)
+        users_emb_df['user_id'] = users_emb_df['index'].apply(lambda x: self.id_to_userid[x])
+        users_emb_df = users_emb_df.drop('index', axis=1)
+
+        return items_emb_df, users_emb_df
+
     @staticmethod
     def _prepare_matrix(data):
         """Готовит user-item матрицу"""
@@ -164,11 +185,14 @@ class MainRecommender:
 
     def get_similar_users_recommendation(self, user, N=5):
         """Рекомендуем топ-N товаров, среди купленных похожими юзерами"""
+
         res = []
 
+        self._update_dict(user_id=user)
         # Находим топ-N похожих пользователей
         try:
             similar_users = self.model.similar_users(self.userid_to_id[user], N=N + 1)
+            similar_users = [rec_usr[0] for rec_usr in similar_users]
             similar_users = similar_users[1:]
 
             for usr in similar_users:
