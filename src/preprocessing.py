@@ -110,8 +110,9 @@ def new_item_features(data, item_features, items_emb_df):
 
 def new_user_features(data, user_features, users_emb_df):
     """Новые признаки для пользователей"""
-
+    data['price']=data['sales_value']/data['quantity']
     new_user_features = user_features.merge(data, on='user_id', how='left')
+
 
     ##### Добавим имбеддинги
     user_features = user_features.merge(users_emb_df, how='left')
@@ -158,17 +159,17 @@ def new_user_features(data, user_features, users_emb_df):
 
 
     ##### Средний чек, средний чек в неделю
-    basket = new_user_features.groupby(['user_id'])['sales_value'].sum().reset_index()
+    basket = new_user_features.groupby(['user_id'])['price'].sum().reset_index()
 
     baskets_qnt = new_user_features.groupby('user_id')['basket_id'].count().reset_index()
     baskets_qnt.rename(columns={'basket_id': 'baskets_qnt'}, inplace=True)
 
     average_basket = basket.merge(baskets_qnt)
 
-    average_basket['average_basket'] = average_basket.sales_value / average_basket.baskets_qnt
-    average_basket['sum_per_week'] = average_basket.sales_value / new_user_features.week_no.nunique()
+    average_basket['average_basket'] = average_basket.price / average_basket.baskets_qnt
+    average_basket['sum_per_week'] = average_basket.price / new_user_features.week_no.nunique()
 
-    average_basket = average_basket.drop(['sales_value', 'baskets_qnt'], axis=1)
+    average_basket = average_basket.drop(['price', 'baskets_qnt'], axis=1)
     user_features = user_features.merge(average_basket, how='left')
 
     return user_features
@@ -202,14 +203,14 @@ def new_features(data, train, recommender, item_features, user_features, items_e
     data_df = data_df.merge(temp_df, on=['user_id', 'commodity_desc'], how='left')
 
     """коэффициент отношения суммы покупок товаров в данной категории к средней сумме"""
-    df_1 = data_df.groupby(['user_id', 'commodity_desc', 'week_no']).agg({'sales_value': 'sum'}) \
-        .reset_index().rename(columns={'sales_value': 'sales_value_week'})
+    df_1 = data_df.groupby(['user_id', 'commodity_desc', 'week_no']).agg({'price': 'sum'}) \
+        .reset_index().rename(columns={'price': 'price_week'})
 
-    df_2 = data_df.groupby(['commodity_desc', 'week_no']).agg({'sales_value': 'sum'}) \
-        .reset_index().rename(columns=({'sales_value': 'mean_sales_value_week'}))
+    df_2 = data_df.groupby(['commodity_desc', 'week_no']).agg({'price': 'sum'}) \
+        .reset_index().rename(columns=({'price': 'mean_price_week'}))
 
     df = df_1.merge(df_2, on=['commodity_desc', 'week_no'], how='left')
-    df['sum_purchases_week_mean'] = df['sales_value_week'] / df['mean_sales_value_week']
+    df['sum_purchases_week_mean'] = df['price_week'] / df['mean_price_week']
     df = df[['user_id', 'commodity_desc', 'sum_purchases_week_mean']]
 
     temp_df = df.groupby(['user_id', 'commodity_desc']).agg({'sum_purchases_week_mean': 'mean'}) \
@@ -278,12 +279,13 @@ def get_final_recomendation_list(row, item_info, train_1, df_price, list_pop_rec
     purchased_goods = train_1.loc[train_1['user_id'] == row['user_id']]['item_id'].unique()
     
 
-    # df_price = train_1.groupby('item_id')['sales_value'].mean().reset_index()
+    # df_price = train_1.groupby('item_id')['price'].mean().reset_index()
     #
     # list_pop_rec = popularity_recommendation(train_1, n=500)
 
     if recommend == 0:
         recommend = list_pop_rec
+
     # 1 Уникальность
     unique_recommendations = []
     [unique_recommendations.append(item) for item in recommend if item not in unique_recommendations]
@@ -291,16 +293,16 @@ def get_final_recomendation_list(row, item_info, train_1, df_price, list_pop_rec
     # 2 Товары дороже 1$
     price_recommendations = []
     [price_recommendations.append(item) for item in unique_recommendations if df_price \
-        .loc[df_price['item_id'] == item]['sales_value'].values > 1]
+        .loc[df_price['item_id'] == item]['price'].values > 1]
 
     # 3 один товар > 7 $
     expensive_items = []
     [expensive_items.append(item) for item in price_recommendations if df_price. \
-        loc[df_price['item_id'] == item]['sales_value'].values > 7]
+        loc[df_price['item_id'] == item]['price'].values > 7]
 
     if len(expensive_items) ==0:
         [expensive_items.append(item) for item in list_pop_rec if df_price. \
-            loc[df_price['item_id'] == item]['sales_value'].values > 7]
+            loc[df_price['item_id'] == item]['price'].values > 7]
 
     # 4 товара юзер никогда не покупал
     new_items = []
@@ -342,12 +344,12 @@ def get_final_recomendation(X_test, test_preds_proba, val_2, train_1, item_featu
     result = result_2.merge(recomendations, how='left')
     result['recomendations'] = result['recomendations'].fillna(0)
 
-    df_price = train_1.groupby('item_id')['sales_value'].mean().reset_index()
+    df_price = train_1.groupby('item_id')['price'].mean().reset_index()
 
     pop_rec = popularity_recommendation(train_1, n=500)
     list_pop_rec = []
     [list_pop_rec.append(item) for item in pop_rec if df_price \
-        .loc[df_price['item_id'] == item]['sales_value'].values > 1]
+        .loc[df_price['item_id'] == item]['price'].values > 1]
 
     result['recomendations'] = result.progress_apply \
         (lambda x: get_final_recomendation_list(x, item_info=item_features, train_1=train_1, df_price=df_price, list_pop_rec=list_pop_rec, N=5), axis=1)

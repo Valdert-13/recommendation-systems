@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def prefilter_items(data, item_features, purchases_weeks=22, take_n_popular=5000):
+def prefilter_items(data, item_features, purchases_weeks=13, take_n_popular=5000):
     """Пред-фильтрация товаров
     Input
     -----
@@ -26,7 +26,7 @@ def prefilter_items(data, item_features, purchases_weeks=22, take_n_popular=5000
     top_notpopular = popularity[popularity['share_unique_users'] < 0.02].item_id.tolist()
     data = data[~data['item_id'].isin(top_notpopular)]
 
-    # Уберем товары, которые не продавались за последние 5 месяцев
+    # Уберем товары, которые не продавались за последние 3 месяцев
     purchases_last_week = data.groupby('item_id')['week_no'].max().reset_index()
     weeks = purchases_last_week[
         purchases_last_week['week_no'] > data['week_no'].max() - purchases_weeks].item_id.tolist()

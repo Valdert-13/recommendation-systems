@@ -35,7 +35,7 @@ def money_precision_at_k(recommended_list, bought_list, df_price, k=5):
     bought_list = np.array(bought_list)
     recommended_list = np.array(recommended_list[:k])
 
-    [prices_recommended.append(df_price.loc[df_price['item_id'] == item]['sales_value'].values) for item in
+    [prices_recommended.append(df_price.loc[df_price['item_id'] == item]['price'].values) for item in
      recommended_list]
 
     prices_recommended = np.array(prices_recommended[:k])
